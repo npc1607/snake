@@ -90,6 +90,39 @@ func TestEnemyHittingPlayerHeadEndsGame(t *testing.T) {
 	}
 }
 
+func TestEnemyEatingFoodGrows(t *testing.T) {
+	engine := NewEngine(Config{Width: 16, Height: 12}, rand.New(rand.NewSource(1)))
+	engine.snake = []Point{
+		{X: 10, Y: 10},
+		{X: 9, Y: 10},
+		{X: 8, Y: 10},
+	}
+	engine.food = Point{X: 5, Y: 4}
+	engine.enemies = []enemySnake{
+		{
+			id:        1,
+			direction: DirectionRight,
+			snake: []Point{
+				{X: 4, Y: 4},
+				{X: 3, Y: 4},
+				{X: 2, Y: 4},
+			},
+		},
+	}
+
+	beforeLength := len(engine.enemies[0].snake)
+	engine.moveEnemies()
+	state := engine.State()
+
+	if len(state.Enemies) != 1 {
+		t.Fatalf("enemy count = %d, want 1", len(state.Enemies))
+	}
+
+	if len(state.Enemies[0].Snake) != beforeLength+1 {
+		t.Fatalf("enemy length = %d, want %d", len(state.Enemies[0].Snake), beforeLength+1)
+	}
+}
+
 func TestPlayerEatingDropAddsScoreAndGrows(t *testing.T) {
 	engine := NewEngine(Config{Width: 16, Height: 12}, rand.New(rand.NewSource(1)))
 	engine.drops = []Point{{X: engine.snake[0].X + 1, Y: engine.snake[0].Y}}

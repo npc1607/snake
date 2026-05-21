@@ -1,5 +1,7 @@
 package game
 
+import "slices"
+
 func (e *Engine) maybeSpawnEnemy() {
 	e.ticksSinceEnemy++
 	if e.ticksSinceEnemy < e.enemySpawnIntervalTicks {
@@ -88,13 +90,18 @@ func (e *Engine) moveEnemies() {
 			continue
 		}
 
-		if nextHead == e.food {
+		ateFood := nextHead == e.food
+		if ateFood {
 			e.food = e.nextFood()
 		}
 
-		nextSnake := make([]Point, 0, len(enemy.snake))
+		nextSnake := make([]Point, 0, len(enemy.snake)+1)
 		nextSnake = append(nextSnake, nextHead)
-		nextSnake = append(nextSnake, enemy.snake[:len(enemy.snake)-1]...)
+		if ateFood {
+			nextSnake = append(nextSnake, enemy.snake...)
+		} else {
+			nextSnake = append(nextSnake, enemy.snake[:len(enemy.snake)-1]...)
+		}
 		enemy.direction = direction
 		enemy.snake = nextSnake
 		nextEnemies = append(nextEnemies, enemy)
@@ -161,13 +168,7 @@ func (e *Engine) enemyCrashes(point Point, enemyIndex int) bool {
 }
 
 func (e *Engine) hitsPlayerBody(point Point) bool {
-	for _, segment := range e.snake[1:] {
-		if segment == point {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(e.snake[1:], point)
 }
 
 func (e *Engine) nextEnemyCountdown() int {
