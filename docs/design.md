@@ -30,8 +30,14 @@ internal/ui
 ├── cmd/snake/main.go
 ├── docs/design.md
 ├── internal/game
+│   ├── collision.go
 │   ├── direction.go
+│   ├── drops.go
+│   ├── enemy.go
+│   ├── enemy_ai.go
 │   ├── engine.go
+│   ├── leaderboard.go
+│   ├── pathfinding.go
 │   ├── point.go
 │   └── state.go
 ├── internal/tui
@@ -39,6 +45,7 @@ internal/ui
 │   ├── keys.go
 │   └── messages.go
 └── internal/ui
+    ├── layout.go
     ├── palette.go
     ├── renderer.go
     └── styles.go
@@ -50,6 +57,7 @@ internal/ui
 - `game.Direction`：蛇的移动方向，负责反向移动保护。
 - `game.State`：当前棋盘、蛇身、食物、分数、游戏状态和帧号。
 - `game.Engine`：封装随机数和规则操作，提供 `Tick`、`Turn`、`TogglePause`、`Reset` 等方法。
+- `game.EnemyState`：敌蛇快照，供 TUI 渲染层读取。
 
 ## 交互设计
 
@@ -64,6 +72,17 @@ internal/ui
 - 食物使用醒目的红粉色。
 - 蛇头和蛇身分开渲染。
 - 蛇身颜色由帧号和身体索引共同决定，tick 推进时颜色沿蛇身流动，形成游动变色效果。
+- 敌蛇使用红橙色流动效果，散落方块使用绿色。
+- 右侧侧栏展示 Top 10 分数、敌蛇数量和下一条敌蛇生成倒计时。
+
+## 敌蛇规则
+
+- 游戏运行后每约 30 秒尝试生成一条敌蛇。
+- 最多同时容纳 6 条蛇：玩家 1 条，敌蛇最多 5 条。
+- 敌蛇通过 BFS 寻路，在食物和玩家头部之间选择目标，阻碍玩家吃食物或主动进攻。
+- 敌蛇撞到玩家头部时游戏结束。
+- 敌蛇撞到玩家身体、墙或其它敌蛇时死亡，并把身体散落成可吃方块。
+- 玩家吃食物或散落方块都会加分并增长身体。
 
 ## 扩展点
 

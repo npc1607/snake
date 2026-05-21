@@ -15,12 +15,20 @@ var snakeWave = []color.Color{
 	lipgloss.Color("#FBBF24"),
 }
 
+var enemyWave = []color.Color{
+	lipgloss.Color("#EF4444"),
+	lipgloss.Color("#F97316"),
+	lipgloss.Color("#F59E0B"),
+	lipgloss.Color("#DC2626"),
+}
+
 var (
 	appBackground   = lipgloss.Color("#101418")
 	boardBackground = lipgloss.Color("#121A20")
 	cellEven        = lipgloss.Color("#17212A")
 	cellOdd         = lipgloss.Color("#1B2630")
 	foodColor       = lipgloss.Color("#F43F5E")
+	dropColor       = lipgloss.Color("#A3E635")
 	textColor       = lipgloss.Color("#D8DEE9")
 	mutedTextColor  = lipgloss.Color("#7F8C98")
 	accentColor     = lipgloss.Color("#38BDF8")

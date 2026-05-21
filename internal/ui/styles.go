@@ -18,6 +18,8 @@ type styles struct {
 	emptyEven   lipgloss.Style
 	emptyOdd    lipgloss.Style
 	food        lipgloss.Style
+	drop        lipgloss.Style
+	enemyHead   lipgloss.Style
 	snakeHead   lipgloss.Style
 	message     lipgloss.Style
 	smallScreen lipgloss.Style
@@ -68,6 +70,13 @@ func newStyles() styles {
 		food: lipgloss.NewStyle().
 			Background(foodColor).
 			Foreground(foodColor),
+		drop: lipgloss.NewStyle().
+			Background(dropColor).
+			Foreground(dropColor),
+		enemyHead: lipgloss.NewStyle().
+			Bold(true).
+			Background(lipgloss.Color("#FCA5A5")).
+			Foreground(lipgloss.Color("#FCA5A5")),
 		snakeHead: lipgloss.NewStyle().
 			Bold(true).
 			Background(lipgloss.Color("#E0F2FE")).

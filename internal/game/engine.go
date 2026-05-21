@@ -4,32 +4,47 @@ import "math/rand"
 
 // Engine owns the game rules and mutable state.
 type Engine struct {
-	width     int
-	height    int
-	snake     []Point
-	food      Point
-	direction Direction
-	next      Direction
-	score     int
-	recorded  bool
-	scores    []int
-	frame     int
-	status    Status
-	random    *rand.Rand
+	width                   int
+	height                  int
+	maxSnakes               int
+	enemySpawnIntervalTicks int
+	ticksSinceEnemy         int
+	nextEnemyID             int
+	snake                   []Point
+	enemies                 []enemySnake
+	drops                   []Point
+	food                    Point
+	direction               Direction
+	next                    Direction
+	score                   int
+	recorded                bool
+	scores                  []int
+	frame                   int
+	status                  Status
+	random                  *rand.Rand
 }
 
 // NewEngine creates a game engine with the provided configuration.
 func NewEngine(config Config, random *rand.Rand) *Engine {
 	config.Width, config.Height = normalizeSize(config.Width, config.Height)
+	if config.MaxSnakes <= 1 {
+		config.MaxSnakes = defaultMaxSnakes
+	}
+
+	if config.EnemySpawnIntervalTicks <= 0 {
+		config.EnemySpawnIntervalTicks = defaultEnemySpawnIntervalTicks
+	}
 
 	if random == nil {
 		random = rand.New(rand.NewSource(1))
 	}
 
 	engine := &Engine{
-		width:  config.Width,
-		height: config.Height,
-		random: random,
+		width:                   config.Width,
+		height:                  config.Height,
+		maxSnakes:               config.MaxSnakes,
+		enemySpawnIntervalTicks: config.EnemySpawnIntervalTicks,
+		random:                  random,
 	}
 	engine.Reset()
 
@@ -45,12 +60,16 @@ func (e *Engine) State() State {
 		Width:     e.width,
 		Height:    e.height,
 		Snake:     snake,
+		Enemies:   enemyStates(e.enemies),
+		Drops:     pointsCopy(e.drops),
 		Food:      e.food,
 		Direction: e.direction,
 		Score:     e.score,
 		Scores:    scoreEntries(e.scores),
 		Frame:     e.frame,
 		Status:    e.status,
+		MaxSnakes: e.maxSnakes,
+		NextEnemy: e.nextEnemyCountdown(),
 	}
 }
 
@@ -77,6 +96,7 @@ func (e *Engine) Reset() {
 	e.score = 0
 	e.recorded = false
 	e.frame = 0
+	e.ticksSinceEnemy = 0
 	e.status = StatusReady
 	e.snake = []Point{
 		center,
@@ -84,6 +104,8 @@ func (e *Engine) Reset() {
 		{X: center.X - 2, Y: center.Y},
 		{X: center.X - 3, Y: center.Y},
 	}
+	e.enemies = nil
+	e.drops = nil
 	e.food = e.nextFood()
 }
 
@@ -121,11 +143,13 @@ func (e *Engine) Tick() {
 		return
 	}
 
+	e.maybeSpawnEnemy()
 	e.direction = e.next
 	head := e.snake[0].move(e.direction)
 	ateFood := head == e.food
+	ateDropIndex := e.dropIndex(head)
 
-	if e.hitsWall(head) || e.hitsSelf(head, ateFood) {
+	if e.hitsWall(head) || e.hitsSelf(head, ateFood || ateDropIndex >= 0) || e.hitsEnemy(head) {
 		e.status = StatusGameOver
 		e.recordScore()
 		return
@@ -135,15 +159,28 @@ func (e *Engine) Tick() {
 	nextSnake = append(nextSnake, head)
 	nextSnake = append(nextSnake, e.snake...)
 
-	if ateFood {
+	if ateFood || ateDropIndex >= 0 {
 		e.score++
 		e.recorded = false
 		e.snake = nextSnake
-		e.food = e.nextFood()
+		if ateFood {
+			e.food = e.nextFood()
+		} else {
+			e.removeDrop(ateDropIndex)
+		}
+		e.moveEnemies()
 		return
 	}
 
 	e.snake = nextSnake[:len(nextSnake)-1]
+	e.moveEnemies()
+}
+
+func pointsCopy(points []Point) []Point {
+	copied := make([]Point, len(points))
+	copy(copied, points)
+
+	return copied
 }
 
 func normalizeSize(width int, height int) (int, int) {
@@ -178,10 +215,7 @@ func (e *Engine) hitsSelf(point Point, grows bool) bool {
 }
 
 func (e *Engine) nextFood() Point {
-	occupied := make(map[Point]struct{}, len(e.snake))
-	for _, segment := range e.snake {
-		occupied[segment] = struct{}{}
-	}
+	occupied := e.occupiedCells()
 
 	freeCells := e.width*e.height - len(occupied)
 	if freeCells <= 0 {

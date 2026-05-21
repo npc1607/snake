@@ -12,15 +12,19 @@ const (
 
 // Config controls the game rules and board size.
 type Config struct {
-	Width  int
-	Height int
+	Width                   int
+	Height                  int
+	MaxSnakes               int
+	EnemySpawnIntervalTicks int
 }
 
 // DefaultConfig returns a balanced board size for terminal play.
 func DefaultConfig() Config {
 	return Config{
-		Width:  32,
-		Height: 20,
+		Width:                   32,
+		Height:                  20,
+		MaxSnakes:               defaultMaxSnakes,
+		EnemySpawnIntervalTicks: defaultEnemySpawnIntervalTicks,
 	}
 }
 
@@ -29,10 +33,14 @@ type State struct {
 	Width     int
 	Height    int
 	Snake     []Point
+	Enemies   []EnemyState
+	Drops     []Point
 	Food      Point
 	Direction Direction
 	Score     int
 	Scores    []ScoreEntry
 	Frame     int
 	Status    Status
+	MaxSnakes int
+	NextEnemy int
 }

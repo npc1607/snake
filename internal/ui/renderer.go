@@ -34,7 +34,7 @@ func (r Renderer) Render(state game.State, terminalWidth int, terminalHeight int
 	board := r.renderBoard(state)
 	help := r.renderHelp(layout.LeftWidth)
 	left := lipgloss.JoinVertical(lipgloss.Left, header, board, help)
-	sidebar := r.renderLeaderboard(state.Scores, layout)
+	sidebar := r.renderLeaderboard(state, layout)
 	content := lipgloss.JoinHorizontal(lipgloss.Top, left, strings.Repeat(" ", layout.Gap), sidebar)
 	content = lipgloss.Place(layout.ContentWidth, layout.ContentHeight, lipgloss.Left, lipgloss.Top, content)
 
@@ -44,9 +44,11 @@ func (r Renderer) Render(state game.State, terminalWidth int, terminalHeight int
 func (r Renderer) renderHeader(state game.State, width int) string {
 	title := r.styles.title.Render("SNAKE")
 	status := r.styles.status.Render(fmt.Sprintf(
-		"Score: %d  Length: %d  State: %s",
+		"Score: %d  Length: %d  Enemies: %d/%d  State: %s",
 		state.Score,
 		len(state.Snake),
+		len(state.Enemies),
+		state.MaxSnakes-1,
 		statusText(state.Status),
 	))
 	spacerWidth := width - lipgloss.Width(title) - lipgloss.Width(status)
@@ -63,12 +65,28 @@ func (r Renderer) renderBoard(state game.State) string {
 		snakeCells[point] = index
 	}
 
+	enemyCells := make(map[game.Point]int)
+	enemyHeads := make(map[game.Point]struct{}, len(state.Enemies))
+	for _, enemy := range state.Enemies {
+		for index, point := range enemy.Snake {
+			if index == 0 {
+				enemyHeads[point] = struct{}{}
+			}
+			enemyCells[point] = index
+		}
+	}
+
+	dropCells := make(map[game.Point]struct{}, len(state.Drops))
+	for _, drop := range state.Drops {
+		dropCells[drop] = struct{}{}
+	}
+
 	rows := make([]string, 0, state.Height)
 	for y := 0; y < state.Height; y++ {
 		var row strings.Builder
 		for x := 0; x < state.Width; x++ {
 			point := game.Point{X: x, Y: y}
-			row.WriteString(r.renderCell(state, point, snakeCells))
+			row.WriteString(r.renderCell(state, point, snakeCells, enemyCells, enemyHeads, dropCells))
 		}
 		rows = append(rows, row.String())
 	}
@@ -82,24 +100,32 @@ func (r Renderer) renderBoard(state game.State) string {
 }
 
 func (r Renderer) renderHelp(width int) string {
-	help := "Move: arrows/WASD/HJKL  Pause: space/P  Restart: R  Quit: Q/Esc"
+	help := "Move: arrows/WASD/HJKL  Pause: space/P  Restart: R  Quit: Q/Esc  Lure enemies into your body"
 	if lipgloss.Width(help) > width {
-		help = "Move: arrows/WASD  Pause: space  Restart: R  Quit: Q"
+		help = "Move: arrows/WASD  Pause: space  Restart: R  Quit: Q  Lure enemies"
 	}
 
 	return r.styles.help.Width(width).Render(help)
 }
 
-func (r Renderer) renderLeaderboard(scores []game.ScoreEntry, layout Layout) string {
+func (r Renderer) renderLeaderboard(state game.State, layout Layout) string {
 	rows := []string{
 		r.styles.sidebarHead.Render("TOP 10"),
-		r.styles.help.Render("Best food scores"),
+		r.styles.help.Render("Best eating scores"),
 		"",
 	}
 
 	for rank := 1; rank <= 10; rank++ {
-		rows = append(rows, r.renderRank(scores, rank))
+		rows = append(rows, r.renderRank(state.Scores, rank))
 	}
+
+	rows = append(rows,
+		"",
+		r.styles.sidebarHead.Render("THREATS"),
+		r.styles.rank.Render(fmt.Sprintf("Enemies  %d/%d", len(state.Enemies), state.MaxSnakes-1)),
+		r.styles.rank.Render(fmt.Sprintf("Next     %ds", enemySeconds(state.NextEnemy))),
+		r.styles.help.Render("Green blocks are loot."),
+	)
 
 	content := strings.Join(rows, "\n")
 
@@ -133,7 +159,14 @@ func (r Renderer) renderRank(scores []game.ScoreEntry, rank int) string {
 	}
 }
 
-func (r Renderer) renderCell(state game.State, point game.Point, snakeCells map[game.Point]int) string {
+func (r Renderer) renderCell(
+	state game.State,
+	point game.Point,
+	snakeCells map[game.Point]int,
+	enemyCells map[game.Point]int,
+	enemyHeads map[game.Point]struct{},
+	dropCells map[game.Point]struct{},
+) string {
 	if index, ok := snakeCells[point]; ok {
 		if index == 0 {
 			return r.styles.snakeHead.Render(cellContent)
@@ -146,8 +179,24 @@ func (r Renderer) renderCell(state game.State, point game.Point, snakeCells map[
 			Render(cellContent)
 	}
 
+	if _, ok := enemyHeads[point]; ok {
+		return r.styles.enemyHead.Render(cellContent)
+	}
+
+	if index, ok := enemyCells[point]; ok {
+		color := enemyWave[(state.Frame+index)%len(enemyWave)]
+		return lipgloss.NewStyle().
+			Background(color).
+			Foreground(color).
+			Render(cellContent)
+	}
+
 	if point == state.Food {
 		return r.styles.food.Render(cellContent)
+	}
+
+	if _, ok := dropCells[point]; ok {
+		return r.styles.drop.Render(cellContent)
 	}
 
 	if (point.X+point.Y)%2 == 0 {
@@ -205,6 +254,10 @@ func rankMarker(rank int) string {
 	default:
 		return "--"
 	}
+}
+
+func enemySeconds(ticks int) int {
+	return (ticks*95 + 999) / 1000
 }
 
 func overlayMessage(status game.Status) string {
