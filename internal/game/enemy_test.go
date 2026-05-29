@@ -67,7 +67,7 @@ func TestEnemyCrashScattersDrops(t *testing.T) {
 
 func TestEnemyHittingPlayerHeadEndsGame(t *testing.T) {
 	engine := NewEngine(Config{Width: 16, Height: 12}, rand.New(rand.NewSource(1)))
-	engine.snake = []Point{
+	engine.players[0].snake = []Point{
 		{X: 6, Y: 6},
 		{X: 5, Y: 6},
 		{X: 4, Y: 6},
@@ -92,7 +92,7 @@ func TestEnemyHittingPlayerHeadEndsGame(t *testing.T) {
 
 func TestEnemyEatingFoodGrows(t *testing.T) {
 	engine := NewEngine(Config{Width: 16, Height: 12}, rand.New(rand.NewSource(1)))
-	engine.snake = []Point{
+	engine.players[0].snake = []Point{
 		{X: 10, Y: 10},
 		{X: 9, Y: 10},
 		{X: 8, Y: 10},
@@ -125,7 +125,7 @@ func TestEnemyEatingFoodGrows(t *testing.T) {
 
 func TestPlayerEatingDropAddsScoreAndGrows(t *testing.T) {
 	engine := NewEngine(Config{Width: 16, Height: 12}, rand.New(rand.NewSource(1)))
-	engine.drops = []Point{{X: engine.snake[0].X + 1, Y: engine.snake[0].Y}}
+	engine.drops = []Point{{X: engine.players[0].snake[0].X + 1, Y: engine.players[0].snake[0].Y}}
 
 	before := engine.State()
 	engine.Turn(DirectionRight)

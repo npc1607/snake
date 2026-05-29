@@ -1,9 +1,11 @@
 package game
 
 func (e *Engine) occupiedCells() map[Point]struct{} {
-	occupied := make(map[Point]struct{}, len(e.snake)+len(e.drops))
-	for _, segment := range e.snake {
-		occupied[segment] = struct{}{}
+	occupied := make(map[Point]struct{}, e.playerSegments()+len(e.drops))
+	for _, player := range e.players {
+		for _, segment := range player.snake {
+			occupied[segment] = struct{}{}
+		}
 	}
 
 	for _, enemy := range e.enemies {
@@ -20,9 +22,11 @@ func (e *Engine) occupiedCells() map[Point]struct{} {
 }
 
 func (e *Engine) occupiedWithoutEnemy(enemyIndex int) map[Point]struct{} {
-	occupied := make(map[Point]struct{}, len(e.snake)+len(e.drops))
-	for _, segment := range e.snake {
-		occupied[segment] = struct{}{}
+	occupied := make(map[Point]struct{}, e.playerSegments()+len(e.drops))
+	for _, player := range e.players {
+		for _, segment := range player.snake {
+			occupied[segment] = struct{}{}
+		}
 	}
 
 	for index, enemy := range e.enemies {
@@ -52,6 +56,15 @@ func (e *Engine) hitsEnemy(point Point) bool {
 	}
 
 	return false
+}
+
+func (e *Engine) playerSegments() int {
+	segmentCount := 0
+	for _, player := range e.players {
+		segmentCount += len(player.snake)
+	}
+
+	return segmentCount
 }
 
 func (e *Engine) hitsEnemyAt(point Point, enemyIndex int, ignoreTail bool) bool {

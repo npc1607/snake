@@ -34,3 +34,20 @@ func enemyStates(enemies []enemySnake) []EnemyState {
 
 	return states
 }
+
+func playerStates(players []playerSnake) []PlayerState {
+	states := make([]PlayerState, len(players))
+	for index, player := range players {
+		snake := make([]Point, len(player.snake))
+		copy(snake, player.snake)
+
+		states[index] = PlayerState{
+			ID:        player.id,
+			Snake:     snake,
+			Direction: player.direction,
+			Alive:     player.alive,
+		}
+	}
+
+	return states
+}

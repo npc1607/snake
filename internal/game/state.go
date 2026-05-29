@@ -14,6 +14,7 @@ const (
 type Config struct {
 	Width                   int
 	Height                  int
+	PlayerCount             int
 	MaxSnakes               int
 	EnemySpawnIntervalTicks int
 }
@@ -23,9 +24,18 @@ func DefaultConfig() Config {
 	return Config{
 		Width:                   32,
 		Height:                  20,
+		PlayerCount:             1,
 		MaxSnakes:               defaultMaxSnakes,
 		EnemySpawnIntervalTicks: defaultEnemySpawnIntervalTicks,
 	}
+}
+
+// PlayerState is a read-only player snake snapshot.
+type PlayerState struct {
+	ID        int
+	Snake     []Point
+	Direction Direction
+	Alive     bool
 }
 
 // State is a read-only snapshot of the current game state for callers.
@@ -33,6 +43,7 @@ type State struct {
 	Width     int
 	Height    int
 	Snake     []Point
+	Players   []PlayerState
 	Enemies   []EnemyState
 	Drops     []Point
 	Food      Point

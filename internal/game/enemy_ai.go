@@ -9,7 +9,7 @@ func (e *Engine) maybeSpawnEnemy() {
 	}
 
 	e.ticksSinceEnemy = 0
-	if len(e.enemies)+1 >= e.maxSnakes {
+	if len(e.enemies)+len(e.players) >= e.maxSnakes {
 		return
 	}
 
@@ -79,7 +79,7 @@ func (e *Engine) moveEnemies() {
 		direction := e.enemyDirection(index)
 		nextHead := enemy.snake[0].move(direction)
 
-		if nextHead == e.snake[0] {
+		if e.hitsAnyPlayerHead(nextHead) {
 			e.status = StatusGameOver
 			e.recordScore()
 			return
@@ -127,12 +127,13 @@ func (e *Engine) enemyDirection(enemyIndex int) Direction {
 
 func (e *Engine) enemyTarget(enemyIndex int) Point {
 	enemyHead := e.enemies[enemyIndex].snake[0]
-	playerHead := e.snake[0]
-	foodDistance := manhattan(enemyHead, e.food)
-	playerDistance := manhattan(enemyHead, playerHead)
-
-	if playerDistance <= foodDistance+3 {
-		return playerHead
+	playerHead, ok := e.closestPlayerHead(enemyHead)
+	if ok {
+		foodDistance := manhattan(enemyHead, e.food)
+		playerDistance := manhattan(enemyHead, playerHead)
+		if playerDistance <= foodDistance+3 {
+			return playerHead
+		}
 	}
 
 	return e.food
@@ -160,19 +161,64 @@ func (e *Engine) enemyCrashes(point Point, enemyIndex int) bool {
 		return true
 	}
 
-	if e.hitsPlayerBody(point) {
+	if e.hitsAnyPlayerBody(point) {
 		return true
 	}
 
 	return e.hitsEnemyAt(point, enemyIndex, true)
 }
 
-func (e *Engine) hitsPlayerBody(point Point) bool {
-	return slices.Contains(e.snake[1:], point)
+func (e *Engine) hitsAnyPlayerBody(point Point) bool {
+	for _, player := range e.players {
+		if !player.alive {
+			continue
+		}
+		if len(player.snake) > 1 && slices.Contains(player.snake[1:], point) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (e *Engine) hitsAnyPlayerHead(point Point) bool {
+	for _, player := range e.players {
+		if !player.alive {
+			continue
+		}
+		if len(player.snake) > 0 && player.snake[0] == point {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (e *Engine) closestPlayerHead(from Point) (Point, bool) {
+	best := Point{}
+	bestDistance := 0
+	found := false
+	for _, player := range e.players {
+		if !player.alive {
+			continue
+		}
+		if len(player.snake) == 0 {
+			continue
+		}
+
+		distance := manhattan(from, player.snake[0])
+		if !found || distance < bestDistance {
+			best = player.snake[0]
+			bestDistance = distance
+			found = true
+		}
+	}
+
+	return best, found
 }
 
 func (e *Engine) nextEnemyCountdown() int {
-	if len(e.enemies)+1 >= e.maxSnakes {
+	if len(e.enemies)+len(e.players) >= e.maxSnakes {
 		return 0
 	}
 

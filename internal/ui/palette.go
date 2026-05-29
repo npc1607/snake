@@ -15,6 +15,15 @@ var snakeWave = []color.Color{
 	lipgloss.Color("#FBBF24"),
 }
 
+var snakeWaveAlt = []color.Color{
+	lipgloss.Color("#F59E0B"),
+	lipgloss.Color("#F97316"),
+	lipgloss.Color("#FB7185"),
+	lipgloss.Color("#F43F5E"),
+	lipgloss.Color("#E879F9"),
+	lipgloss.Color("#C084FC"),
+}
+
 var enemyWave = []color.Color{
 	lipgloss.Color("#EF4444"),
 	lipgloss.Color("#F97316"),

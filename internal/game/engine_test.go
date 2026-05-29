@@ -43,9 +43,11 @@ func TestTickGrowsWhenEatingFood(t *testing.T) {
 
 func TestTickGameOverWhenHittingWall(t *testing.T) {
 	engine := NewEngine(Config{Width: 12, Height: 8}, rand.New(rand.NewSource(1)))
-	engine.snake = []Point{{X: 11, Y: 3}, {X: 10, Y: 3}, {X: 9, Y: 3}}
-	engine.direction = DirectionRight
-	engine.next = DirectionRight
+	engine.players[0].snake = []Point{{X: 11, Y: 3}, {X: 10, Y: 3}, {X: 9, Y: 3}}
+	engine.players[0].direction = DirectionRight
+	engine.players[0].next = DirectionRight
+	engine.players[0].alive = true
+	engine.players[0].started = true
 	engine.status = StatusRunning
 
 	engine.Tick()
@@ -82,6 +84,73 @@ func TestPauseStopsMovement(t *testing.T) {
 
 	if after.Snake[0] != before.Snake[0] {
 		t.Fatalf("head moved while paused: got %+v, want %+v", after.Snake[0], before.Snake[0])
+	}
+}
+
+func TestSecondPlayerDoesNotMoveBeforeInput(t *testing.T) {
+	engine := NewEngine(Config{Width: 20, Height: 12, PlayerCount: 2}, rand.New(rand.NewSource(1)))
+	engine.Turn(DirectionRight)
+
+	before := engine.State()
+	if len(before.Players) != 2 {
+		t.Fatalf("player count = %d, want 2", len(before.Players))
+	}
+	if before.Players[1].Alive {
+		t.Fatalf("player 2 should be inactive before input")
+	}
+
+	engine.Tick()
+	after := engine.State()
+
+	if after.Players[1].Alive {
+		t.Fatalf("player 2 should still be inactive without input")
+	}
+	if after.Players[1].Snake[0] != before.Players[1].Snake[0] {
+		t.Fatalf("player 2 head moved: got %+v, want %+v", after.Players[1].Snake[0], before.Players[1].Snake[0])
+	}
+}
+
+func TestFirstPlayerDoesNotMoveWhenSecondPlayerStarts(t *testing.T) {
+	engine := NewEngine(Config{Width: 20, Height: 12, PlayerCount: 2}, rand.New(rand.NewSource(1)))
+
+	before := engine.State()
+	engine.TurnPlayer(2, DirectionUp)
+	engine.Tick()
+	after := engine.State()
+
+	if after.Status != StatusRunning {
+		t.Fatalf("status = %v, want %v", after.Status, StatusRunning)
+	}
+	if !after.Players[1].Alive {
+		t.Fatalf("player 2 should become active after input")
+	}
+	if after.Players[0].Snake[0] != before.Players[0].Snake[0] {
+		t.Fatalf("player 1 head moved: got %+v, want %+v", after.Players[0].Snake[0], before.Players[0].Snake[0])
+	}
+
+	wantPlayerTwoHead := Point{X: before.Players[1].Snake[0].X, Y: before.Players[1].Snake[0].Y - 1}
+	if after.Players[1].Snake[0] != wantPlayerTwoHead {
+		t.Fatalf("player 2 head = %+v, want %+v", after.Players[1].Snake[0], wantPlayerTwoHead)
+	}
+}
+
+func TestPausedSecondPlayerInputDoesNotActivateSnake(t *testing.T) {
+	engine := NewEngine(Config{Width: 20, Height: 12, PlayerCount: 2}, rand.New(rand.NewSource(1)))
+	engine.Turn(DirectionRight)
+	engine.TogglePause()
+
+	before := engine.State()
+	engine.TurnPlayer(2, DirectionUp)
+	after := engine.State()
+
+	if after.Status != StatusPaused {
+		t.Fatalf("status = %v, want %v", after.Status, StatusPaused)
+	}
+	if after.Players[1].Alive {
+		t.Fatalf("player 2 should remain inactive while paused")
+	}
+	if after.Players[1].Snake[0] != before.Players[1].Snake[0] {
+		t.Fatalf("player 2 head changed while paused: got %+v, want %+v", after.Players[1].Snake[0], before.Players[1].Snake[0])
 	}
 }
 
