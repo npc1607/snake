@@ -103,7 +103,7 @@ The core game engine does not import Bubble Tea or Lip Gloss. That keeps the dom
 
 ## LAN Multiplayer Roadmap
 
-The LAN design is documented in [docs/design.md](/Users/pcong/Project/snake/docs/design.md:94).
+The LAN design is documented in [docs/design.md](/docs/design.md:94).
 
 Implemented:
 
